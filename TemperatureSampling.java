@@ -1,3 +1,5 @@
+
+
 import java.net.URI;
 import java.net.http.*;
 import java.nio.file.*;
@@ -18,7 +20,7 @@ import java.nio.file.*;
  * cd tools/llama.cpp
  * 
  * # download prebuilt Ubuntu x64 release archive
- * wget https://github.com/ggml-org/llama.cpp/releases/download/b8514/llama-b8514-bin-ubuntu-x64.tar.gz -O llama-prebuilt.tar.gz
+ * curl -L https://github.com/ggml-org/llama.cpp/releases/download/b8514/llama-b8514-bin-ubuntu-x64.tar.gz -o llama-prebuilt.tar.gz
  * tar -xzf llama-prebuilt.tar.gz
  *
  * # verify binaries exist
@@ -42,6 +44,9 @@ public class TemperatureSampling {
     private final String prompt =
             "Explain why the sky is blue in one paragraph:";
 
+    // Path to the locally downloaded llama-server binary
+    private final String llamaServerBin = "tools/llama.cpp/llama-b8514/llama-server";
+
     private final HttpClient httpClient;
     private final String modelsDir;
 
@@ -53,7 +58,7 @@ public class TemperatureSampling {
     // Main entry point
     public static void main(String[] args) throws Exception {
         String modelsDir = args.length > 0 ? args[0] : "downloaded_models";
-        Exercise02TemperatureSampling app = new Exercise02TemperatureSampling(modelsDir);
+        TemperatureSampling app = new TemperatureSampling(modelsDir);
         app.run();
     }
 
@@ -140,7 +145,7 @@ public class TemperatureSampling {
     private Process startServer(Path ggufPath) throws Exception {
         System.out.println("Starting llama-server on port " + serverPort + " ...");
         ProcessBuilder pb = new ProcessBuilder(
-            "llama-server",
+            llamaServerBin,
             "-m", ggufPath.toString(),
             "--port", String.valueOf(serverPort),
             "--ctx-size", "2048",
@@ -224,18 +229,12 @@ public class TemperatureSampling {
                 .replace("\t", "\\t");
     }
 
-    // Checks that llama-server is installed before running
+    // Checks that the local llama-server binary exists before running
 
     private void checkLlamaServer() {
-        try {
-            Process p = new ProcessBuilder("which", "llama-server")
-                    .redirectErrorStream(true).start();
-            int code = p.waitFor();
-            if (code != 0) throw new RuntimeException();
-        } catch (Exception e) {
-            System.err.println("ERROR: llama-server is not installed.");
-            System.err.println("  Install llama.cpp:  brew install llama.cpp");
-            System.err.println("  Then re-run this exercise.");
+        if (!java.nio.file.Files.exists(java.nio.file.Paths.get(llamaServerBin))) {
+            System.err.println("ERROR: llama-server binary not found at: " + llamaServerBin);
+            System.err.println("  Run the setup steps in the comment at the top of this file.");
             System.exit(1);
         }
     }
